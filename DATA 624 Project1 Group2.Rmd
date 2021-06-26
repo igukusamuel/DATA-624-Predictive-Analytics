@@ -1,0 +1,300 @@
+---
+title: "DATA 624 Project data test"
+author: "Samuel I Kigamba"
+date: "June 23, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(fpp2)
+library(readxl)
+```
+
+# This analysis covers "S02Var03" "S03Var05" & "S03Var07"
+
+```{r}
+xlsx_path <- "raw_data.xlsx"
+df <- readxl::read_xlsx(xlsx_path)
+head(df)
+
+```
+
+```{r}
+raw = df[c("SeriesInd", "S02Var03", "S03Var05", "S03Var07")]
+summary(raw)
+
+```
+
+S03VAr05 and S03VAr07 looks almost identical from the summary above.
+
+Visualize the data and look for seasonality or trend within the different data sets of data.
+
+```{r}
+
+# Data under S02var03 has an outlier which we eliminate before creating visualizations.
+raw %>%
+  filter(S02Var03 < 20) %>%
+  ggplot(aes(x = SeriesInd, y = S02Var03)) +
+    geom_line() +
+  ggtitle("S02Var03")
+
+raw %>%
+  ggplot(aes(x = SeriesInd, y = S03Var05)) +
+    geom_line() +
+  ggtitle("S03Var05")
+
+raw %>%
+  ggplot(aes(x = SeriesInd, y = S03Var07)) +
+    geom_line() +
+  ggtitle("S03Var07")
+
+```
+
+
+
+
+
+```{r}
+# Convert to time series
+SeriesInd.ts <- ts(raw$SeriesInd)
+X.ts <- ts(raw$S02Var03)
+Y.ts <- ts(raw$S03Var05)
+Z.ts <- ts(raw$S03Var07)
+
+```
+
+# S02Var03
+
+```{r}
+X1 <- tsCV(raw$S02Var03, ses, h=140)
+X2 <- tsCV(raw$S02Var03, holt, h=140)
+X3 <- tsCV(raw$S02Var03, holt, damped=TRUE, h=140)
+
+print("S02Var03")
+print("MSE")
+
+# Compare MSE:
+
+print(c("ses:", mean(X1^2, na.rm=TRUE)))
+
+print(c("Holt:", mean(X2^2, na.rm=TRUE)))
+
+print(c("Holt damped:", mean(X3^2, na.rm=TRUE)))
+
+
+print("MAE")
+# Compare MAE:
+
+print(c("ses:", mean(abs(X1), na.rm=TRUE)))
+
+print(c("Holt:", mean(abs(X2), na.rm=TRUE)))
+
+print(c("Holt damped:", mean(abs(X3), na.rm=TRUE)))
+
+```
+
+```{r}
+
+X.ts <- raw %>%
+  filter(S02Var03 < 20) %>%
+  select(S02Var03) %>%
+  ts()
+
+X_rwf <- rwf(X.ts, h = 140)
+X_drwf <- rwf(X.ts, h = 140, drift = TRUE)
+X_mean <- meanf(X.ts, h = 140)
+
+# Add exponential Smoothing and see if its provides better forecasting from the visulization
+X_ses <- ses(X.ts, h = 140)
+
+autoplot(X.ts) +
+  autolayer(X_rwf, series = "Naive", PI = FALSE) +
+  autolayer(X_drwf, series = "Drift", PI = FALSE) +
+  autolayer(X_mean, series = "Mean", PI = FALSE) +
+  autolayer(X_ses, series = "Ses", PI = FALSE)
+
+```
+
+
+# Exponential Smoothing
+
+```{r}
+
+X_ses <- ses(X.ts, h = 140)
+X_ses[["model"]]
+
+```
+
+This only offers a minor increment in forecasting which is not not justifiable in light of its complexity compared to simple random walk forecast method.
+
+
+```{r}
+
+# Estimate parameters (Random Walk Forecast)
+
+summary(X_rwf)
+
+```
+
+
+
+# S03Var05
+
+```{r}
+
+Y1 <- tsCV(raw$S03Var05, ses, h=140)
+Y2 <- tsCV(raw$S03Var05, holt, h=140)
+Y3 <- tsCV(raw$S03Var05, holt, damped=TRUE, h=140)
+
+
+print("S03Var05")
+print("MSE")
+
+# Compare MSE:
+
+print(c("ses:", mean(Y1^2, na.rm=TRUE)))
+
+print(c("Holt:", mean(Y2^2, na.rm=TRUE)))
+
+print(c("Holt damped:", mean(Y3^2, na.rm=TRUE)))
+
+
+print("MAE")
+
+# Compare MAE:
+
+print(c("ses:", mean(abs(Y1), na.rm=TRUE)))
+
+print(c("Holt:", mean(abs(Y2), na.rm=TRUE)))
+
+print(c("Holt damped:", mean(abs(Y3), na.rm=TRUE)))
+
+```
+
+
+```{r}
+
+Y_rwf <- rwf(Y.ts, h = 140)
+Y_drwf <- rwf(Y.ts, h = 140, drift = TRUE)
+Y_mean <- meanf(Y.ts, h = 140)
+
+# Add exponential Smoothing and see if its provides better forecasting from the visulization
+Y_ses <- ses(Y.ts, h = 140)
+
+autoplot(Y.ts) +
+  autolayer(Y_rwf, series = "Naive", PI = FALSE) +
+  autolayer(Y_drwf, series = "Drift", PI = FALSE) +
+  autolayer(Y_mean, series = "Mean", PI = FALSE) +
+  autolayer(Y_ses, series = "Ses", PI = FALSE)
+
+```
+
+
+
+# Exponential Smoothing
+
+```{r}
+
+Y_ses <- ses(Y.ts, h = 140)
+Y_ses[["model"]]
+
+```
+
+Exponential smoothing only offers a minor increment in forecasting which is not not justifiable in light of its complexity compared to simple random walk forecast method.
+
+
+```{r}
+
+# Estimate parameters (Random Walk Forecast)
+
+summary(Y_rwf)
+
+```
+
+
+
+
+
+
+# S03Var07
+
+```{r}
+
+Z1 <- tsCV(raw$S03Var07, ses, h=140)
+Z2 <- tsCV(raw$S03Var07, holt, h=140)
+Z3 <- tsCV(raw$S03Var07, holt, damped=TRUE, h=140)
+
+
+print("S03Var07")
+print("MSE")
+
+# Compare MSE:
+
+print(c("ses:", mean(Z1^2, na.rm=TRUE)))
+
+print(c("Holt:", mean(Z2^2, na.rm=TRUE)))
+
+print(c("Holt damped:", mean(Z3^2, na.rm=TRUE)))
+
+
+print("MAE")
+# Compare MAE:
+
+print(c("ses:", mean(abs(Z1), na.rm=TRUE)))
+
+print(c("Holt:", mean(abs(Z2), na.rm=TRUE)))
+
+print(c("Holt damped:", mean(abs(Z3), na.rm=TRUE)))
+
+
+```
+
+
+
+```{r}
+
+Z_rwf <- rwf(Z.ts, h = 140)
+Z_drwf <- rwf(Z.ts, h = 140, drift = TRUE)
+Z_mean <- meanf(Z.ts, h = 140)
+
+# Add exponential Smoothing and see if its provides better forecasting from the visulization
+Z_ses <- ses(Y.ts, h = 140)
+
+autoplot(Z.ts) +
+  autolayer(Z_rwf, series = "Naive", PI = FALSE) +
+  autolayer(Z_drwf, series = "Drift", PI = FALSE) +
+  autolayer(Z_mean, series = "Mean", PI = FALSE) +
+  autolayer(Z_ses, series = "Ses", PI = FALSE)
+
+```
+
+
+
+
+
+# Exponential Smoothing
+
+```{r}
+
+Z_ses <- ses(Z.ts, h = 140)
+Z_ses[["model"]]
+
+```
+
+This only offers a minor increment in forecasting which is not not justifiable in light of its complexity compared to simple random walk forecast method.
+
+
+```{r}
+
+# Estimate parameters (Random Walk Forecast)
+
+
+summary(Z_rwf)
+
+```
